@@ -6,6 +6,9 @@ import pygame
 import os
 import sys
 import time
+
+from atomix_state import AtomixState
+from collections import deque
 from queue import PriorityQueue
 
 # initialize pygame
@@ -61,28 +64,41 @@ def read_level(level_number):
     atom_map = {}
     molecule_name_phase = None
 
+    is_molecule_read = False
+    is_atom_map_read = False
+
     with open(filepath) as f:
         for line in f:
-            line = line.strip()
-            if line == '':
-                break
-            elif molecule_name_phase is None:
-                molecule_name_phase = line
-            else:
-                level_map.append(line)
-
-        for line in f:
-            line = line.strip()
-            if line.startswith('#'):
+            line_strip = line.strip()
+            if molecule_name_phase is None:
+                molecule_name_phase = line_strip
                 continue
-            num, *atom_data = line.split()
-            atom, links = atom_data[0], atom_data[1:]
-            atom_map[int(num)] = {"atom": atom, "connections": {}}
-            for l in links:
-                direction, neighbor_num = l[-1], int(l[:-1])
-                atom_map[int(num)]["connections"][direction] = neighbor_num
+            if line_strip.startswith('#'):
+                level_map.append(line_strip)
+                continue
+            if line_strip == '' and not is_molecule_read:
+                is_molecule_read = True
+                continue
+            if line_strip != '' and is_molecule_read and not is_atom_map_read:
+                molecule_to_form = ''
+                for c in line_strip:
+                    if c.isdigit():
+                        molecule_to_form += c
+                    elif c.isalpha():
+                        molecule_to_form += '.'
+                    else:
+                        molecule_to_form += '\n'
+            if line_strip == '' and not is_atom_map_read:
+                is_atom_map_read = True
+            if line_strip != '' and is_atom_map_read:
+                num, *atom_data = line_strip.split()
+                atom, links = atom_data[0], atom_data[1:]
+                atom_map[int(num)] = {"atom": atom, "connections": {}}
+                for l in links:
+                    direction, neighbor_num = l[-1], int(l[:-1])
+                    atom_map[int(num)]["connections"][direction] = neighbor_num
 
-    return level_map, atom_map, molecule_name_phase
+    return level_map, atom_map, molecule_name_phase, molecule_to_form
 
 
 # Draws the game board and atoms on the screen into the respective level
@@ -92,9 +108,7 @@ def draw_level(level):
 
     # Load the game data
     dataset_game = read_level(level)
-    board = dataset_game[0]
-    atom_map = dataset_game[1]
-    molecule_to_build = dataset_game[2]
+    board, atom_map, molecule_name, molecule_structure = dataset_game
 
     # Draw the title
     title_font = pygame.font.Font('assets/atomix-font.otf', 40)
@@ -110,7 +124,7 @@ def draw_level(level):
 
     # Draw the molecule to be built
     molecule_font = pygame.font.Font('assets/atomix-font.otf', 20)
-    molecule_text = molecule_font.render(f"Build {molecule_to_build}", True, BLACK)
+    molecule_text = molecule_font.render(f"Build {molecule_name}", True, BLACK)
     molecule_rect = molecule_text.get_rect(center=(WINDOW_WIDTH // 2, 80))
     screen.blit(molecule_text, molecule_rect)
 
@@ -187,7 +201,12 @@ def main():
         '''
 
         # draw the level
-        draw_level(1)
+        dataset_game = read_level(1)
+        board, atom_map, molecule_name, molecule_structure = dataset_game
+
+        af = bfs(AtomixState(board, molecule_structure, atom_map))
+        # prints the sequence for the first problem using bfs
+        print_sequence(af)
 
         pygame.display.update()
 
@@ -205,7 +224,37 @@ def main():
     sys.exit()
 
 
+def print_sequence(sequence):
+    print("Steps:", len(sequence) - 1)
+    # prints the sequence of states
+    for state in sequence:
+        for row in state:
+            print(row)
+        print()
+
+
+def bfs(problem):
+    # problem(NPuzzleState) - the initial state
+    queue = deque([problem])
+    visited = set()  # to not visit the same state twice
+
+    while queue:
+        node = queue.popleft()
+        visited.add(node)
+
+        if node.is_molecule_formed():
+            return node.move_history
+
+        for child in node.children():
+            if child not in visited:
+                queue.append(child)
+
+    return None
+
+
+
 main()
+
 
 '''
 def draw_game(board, atoms):
