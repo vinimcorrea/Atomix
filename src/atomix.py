@@ -1,6 +1,5 @@
 # import libraries
 import random
-import numpy as np
 
 import pygame
 import os
@@ -19,7 +18,7 @@ WINDOW_WIDTH = 1024
 WINDOW_HEIGHT = 768
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 pygame.display.set_caption("Atomix")
-WALL_TEXTURE = pygame.image.load('assets/wall.jpg').convert()
+WALL_TEXTURE = pygame.image.load('resources/assets/wall.jpg').convert()
 
 # set up the clock
 clock = pygame.time.Clock()
@@ -204,7 +203,7 @@ def main():
         dataset_game = read_level(1)
         board, atom_map, molecule_name, molecule_structure = dataset_game
 
-        af = bfs(AtomixState(board, molecule_structure, atom_map))
+        af = bfs(AtomixState(board, molecule_structure))
         # prints the sequence for the first problem using bfs
         print_sequence(af)
 
@@ -234,7 +233,6 @@ def print_sequence(sequence):
 
 
 def bfs(problem):
-    # problem(NPuzzleState) - the initial state
     queue = deque([problem])
     visited = set()  # to not visit the same state twice
 

@@ -1,14 +1,14 @@
 from copy import deepcopy
 
-
+BLANK_SPACE = '.'
 class AtomixState:
-    def __init__(self, board, molecule, atom_connections, move_history=[]):
+    def __init__(self, board, molecule, move_history=[]):
         # board(list[list[int]]) - the state of the board
         # move_history(list[list[list[int]]]) - the history of the moves up until this state
         self.board = deepcopy(board)
         self.atoms = self.find_atoms()
         self.molecule = deepcopy(molecule)
-        self.atoms_connections = deepcopy(atom_connections)
+        self.board_width = len(board[0])
 
         # create an empty array and append move_history
         self.move_history = [] + move_history + [self.board]
@@ -17,11 +17,14 @@ class AtomixState:
         # returns the possible moves
         functions = [self.up, self.down, self.left, self.right]
 
+        # returns the possible atoms
+
         children = []
-        for func in functions:
-            child = func()
-            if child:
-                children.append(child)
+        for atom, (atom_pos_row, atom_pos_col) in self.atoms.items():
+            for func in functions:
+                child = func(atom, atom_pos_row, atom_pos_col)
+                if child:
+                    children.append(child)
 
         return children
 
@@ -37,9 +40,9 @@ class AtomixState:
     def move(func):
         # decorator function to add to history everytime a move is made
         # functions with @move will apply this decorator
-        def wrapper(self):
-            state = AtomixState(self.board, self.move_history)
-            value = func(state)
+        def wrapper(self, atom, atom_pos_row, atom_pos_col):
+            state = AtomixState(self.board, self.molecule, self.move_history)
+            value = func(state, atom, atom_pos_row, atom_pos_col)
             if value:
                 return state
             else:
@@ -48,55 +51,119 @@ class AtomixState:
         return wrapper
 
     @move
-    def up(self):
+    def up(self, atom, atom_pos_row, atom_pos_col):
         # moves the atom upwards
-        prev = self.board[self.blank_row - 1][self.blank_col]
+        prev = self.board[atom_pos_row - 1][atom_pos_col]
 
-        if prev == '#' or prev.isdigit():
+        if prev != BLANK_SPACE:
             return False
 
-        self.board[self.blank_row][self.blank_col] = self.board[self.blank_row - 1][self.blank_col]
-        self.board[self.blank_row - 1][self.blank_col] = '.'
-        self.blank_row -= 1
+        board_row = ""
+
+        for i in range(self.board_width):
+            if i == atom_pos_col:
+                board_row += self.board[atom_pos_row][atom_pos_col]
+                continue
+            board_row += self.board[atom_pos_row - 1][i]
+
+        self.board[atom_pos_row - 1] = board_row
+        board_row = ""
+
+        for i in range(self.board_width):
+            if i == atom_pos_col:
+                board_row += '.'
+                continue
+            board_row += self.board[atom_pos_row][i]
+
+        self.board[atom_pos_row] = board_row
+
+        # updating the atom coordinates
+        self.atoms[atom] = (atom_pos_row - 1, atom_pos_col)
+
         return True
 
     @move
-    def down(self):
+    def down(self, atom, atom_pos_row, atom_pos_col):
         # moves the atom downwards
-        prev = self.board[self.blank_row + 1][self.blank_col]
+        prev = self.board[atom_pos_row + 1][atom_pos_col]
 
-        if prev == '#' or prev.isdigit():
+        if prev != BLANK_SPACE:
             return False
 
-        self.board[self.blank_row][self.blank_col] = self.board[self.blank_row + 1][self.blank_col]
-        self.board[self.blank_row + 1][self.blank_col] = '.'
-        self.blank_row += 1
+        board_row = ""
+
+        for i in range(self.board_width):
+            if i == atom_pos_col:
+                board_row += self.board[atom_pos_row][atom_pos_col]
+                continue
+            board_row += self.board[atom_pos_row + 1][i]
+
+        self.board[atom_pos_row + 1] = board_row
+        board_row = ""
+
+        for i in range(self.board_width):
+            if i == atom_pos_col:
+                board_row += '.'
+                continue
+            board_row += self.board[atom_pos_row][i]
+
+        self.board[atom_pos_row] = board_row
+
+        # updating the atom coordinates
+        self.atoms[atom] = (atom_pos_row + 1, atom_pos_col)
+
         return True
 
     @move
-    def left(self):
+    def left(self, atom, atom_pos_row, atom_pos_col):
         # moves the atom leftwards
-        prev = self.board[self.blank_row][self.blank_col - 1]
+        prev = self.board[atom_pos_row][atom_pos_col - 1]
 
-        if prev == '#' or prev.isdigit():
+        if prev != BLANK_SPACE:
             return False
 
-        self.board[self.blank_row][self.blank_col] = self.board[self.blank_row][self.blank_col - 1]
-        self.board[self.blank_row][self.blank_col - 1] = '.'
-        self.blank_col -= 1
+        board_row = ""
+
+        for i in range(self.board_width):
+            if i == atom_pos_col - 1:
+                board_row += self.board[atom_pos_row][atom_pos_col]
+                continue
+            elif i == atom_pos_col:
+                board_row += '.'
+                continue
+            board_row += self.board[atom_pos_row][i]
+
+        self.board[atom_pos_row] = board_row
+
+        # updating the atom coordinates
+        self.atoms[atom] = (atom_pos_row, atom_pos_col - 1)
+
         return True
 
     @move
-    def right(self):
+    def right(self, atom, atom_pos_row, atom_pos_col):
         # moves the atom rightwards
-        prev = self.board[self.blank_row][self.blank_col + 1]
+        prev = self.board[atom_pos_row][atom_pos_col + 1]
 
-        if prev == '#' or prev.isdigit():
+        if prev != BLANK_SPACE:
             return False
 
-        self.board[self.blank_row][self.blank_col] = self.board[self.blank_row][self.blank_col + 1]
-        self.board[self.blank_row][self.blank_col + 1] = '.'
-        self.blank_col += 1
+        board_row = ""
+
+        for i in range(self.board_width):
+            if i == atom_pos_col + 1:
+                board_row += self.board[atom_pos_row][atom_pos_col]
+                continue
+            elif i == atom_pos_col:
+                board_row += '.'
+                continue
+            board_row += self.board[atom_pos_row][i]
+
+        self.board[atom_pos_row] = board_row
+
+        # updating the atom coordinates
+        self.atoms[atom] = (atom_pos_row, atom_pos_col + 1)
+
         return True
 
     def is_molecule_formed(self):
