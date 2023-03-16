@@ -10,6 +10,8 @@ from atomix_state import AtomixState
 from collections import deque
 from queue import PriorityQueue
 
+import algortihms
+
 # initialize pygame
 pygame.init()
 
@@ -56,6 +58,7 @@ FONT_LARGE = pygame.font.SysFont('comicsans', 50)
 
 
 def read_level(level_number):
+
     filename = f"level{level_number}-water.txt"
     filepath = os.path.join("resources/levels", filename)
 
@@ -250,8 +253,12 @@ def bfs(problem):
     return None
 
 
-
-main()
+while True:
+    # Handling input
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit() 
 
 
 '''
@@ -283,6 +290,7 @@ def check_game_over(): # if we want to difficult, add a limit of moves
 
 
 
+
 def solve_game(algorithm, heuristic):
     # Solve the game using the specified algorithm and heuristic
     global board, game_over
@@ -292,21 +300,19 @@ def solve_game(algorithm, heuristic):
     pieces_left = 10
     while not game_over and pieces_left > 0:
         if algorithm == "BFS":
-            path = bfs(heuristic)
+            path = BFS(0,0,0).algorithm(heuristic)
         elif algorithm == "DFS":
-            path = dfs(heuristic)
+            path = DFS(0,0,0).algorithm(heuristic)
         elif algorithm == "IDDFS":
-            path = iddfs(heuristic)
-        elif algorithm == "UCS":
-            path = ucs(heuristic)
+            path = IDDFS(0,0,0).algorithm(heuristic)
         elif algorithm == "GREEDY":
-            path = greedy(heuristic)
+            path = GREEDY(0,0,0).algorithm(heuristic)
         elif algorithm == "ASTAR":
-            path = astar(heuristic)
+            path = ASTAR(0,0,0).algorithm(heuristic)
         elif algorithm == "WA":
-            path = weighted_astar(heuristic, 2.0)
+            path = WEIGHTEDASTAR(0,0,0).algorithm(heuristic, 2.0)
         elif algorithm == "WA2":
-            path = weighted_astar(heuristic, 3.0)
+            path = WEIGHTEDASTAR(0,0,0).algorithm(heuristic, 3.0)
         else:
             raise ValueError("Invalid algorithm")
         if path is None:
@@ -322,4 +328,5 @@ def solve_game(algorithm, heuristic):
         draw_score(score)
         pygame.display.flip()
         pygame.time.wait(500)
+
 '''
