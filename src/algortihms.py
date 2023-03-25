@@ -1,15 +1,16 @@
 from queue import PriorityQueue
 from collections import deque
 import time
+import tracemalloc
 
 class Algorithm:
     def __new__(cls, *args, **kwargs):
         return super().__new__(cls)
 
-    def __init__(self, nOperations, maxMemory, solveTime):
-        self.nOperations = nOperations
-        self.maxMemory = maxMemory
-        self.solveTime = solveTime
+    def __init__(self):
+        self.nOperations = 0
+        self.maxMemory = 0
+        self.solveTime = 0
     
     def getNOperations(self):
         return self.nOperations
@@ -20,39 +21,50 @@ class Algorithm:
     def getSolveTime(self):
         return self.solveTime
 
+
 class BFS(Algorithm):
     def __init__(self, nOperations, maxMemory, solveTime):
-        super.__init__(nOperations, maxMemory, solveTime)
+        super().__init__(nOperations, maxMemory, solveTime)
 
     def getNOperations(self):
         return super().getNOperations()
     
     def getMaxMemory(self):
-        return super().getMaxMemory
+        return super().getMaxMemory()
 
     def getSolveTime(self):
-        return super().getSolveTime
+        return super().getSolveTime()
     
-    def algorithm(state):
+    def algorithm(self, state):
+
+        start = time.time()
         queue = deque([state])
         visited = set()  # to not visit the same state twice
+
+        tracemalloc.start()
 
         while queue:
             node = queue.popleft()
             visited.add(node)
+            self.nOperations += 1
 
             if node.is_molecule_formed():
+                end = time.time()
+                self.solveTime = end - start
+                self.maxMemory = tracemalloc.get_traced_memory()[1]
+                tracemalloc.stop()
                 return node.move_history
 
             for child in node.children():
                 if child not in visited:
                     queue.append(child)
 
-        return None
+        return "No Solution Found"
+    
 
 class DFS(Algorithm):
     def __init__(self, nOperations, maxMemory, solveTime):
-        super.__init__(nOperations, maxMemory, solveTime)
+        super().__init__(nOperations, maxMemory, solveTime)
 
     def getNOperations(self):
         return super().getNOperations()
@@ -62,21 +74,43 @@ class DFS(Algorithm):
 
     def getSolveTime(self):
         return super().getSolveTime
+    
+    def dfsaux(self, state, start, movehistory):
+
+        self.nOperations += 1
+
+        if state.is_molecule_formed():
+            end = time.time()
+            self.getSolveTime = end - start
+            self.maxMemory = tracemalloc.get_traced_memory()[1]
+            tracemalloc.stop()
+            return movehistory
+
+        for child in state.children():
+            if child.board not in movehistory:
+                print("NODE FOUND")
+                movehistory.append(child.board)
+                result = self.dfsaux(child, start, movehistory)
+                if result:
+                    return result
+                movehistory.pop()
+
+        return None
 
     def algorithm(self, state):
 
-        if state.is_molecule_formed():
-            return state.move_history
+        start = time.time()
+        tracemalloc.start()
 
-        for child in state.children:
-            if child not in state.move_history:
-                return self.dfs(child)
+        movehistory = [state.board]
 
-        return "No Solution Found"
+        result = self.dfsaux(state, start, movehistory)
+
+        return result
 
 class IDDFS(Algorithm):
     def __init__(self, nOperations, maxMemory, solveTime):
-        super.__init__(nOperations, maxMemory, solveTime)
+        super().__init__(nOperations, maxMemory, solveTime)
 
     def getNOperations(self):
         return super().getNOperations()
@@ -92,27 +126,24 @@ class IDDFS(Algorithm):
             return node.move_history
 
         if (limit <= 0):
-            return False
+            return None
 
         for child in node.children:
-            if self.DLS(child, target, limit):
-                return True
+            solution =  self.DLS(child, target, limit)
+            if solution is not None:
+                return solution
     
     def algorithm(self, node, target, maxDepth):
+
         for limit in maxDepth:
-            if self.DLS(node, target, limit) == True:
+            solution =  self.DLS(node, target, limit) == True
+            if solution is not None:
                 return True
         return False   
 
-    def __init__(self, nOperations, maxMemory, solveTime):
-        super.__init__(nOperations, maxMemory, solveTime)
-
-    def algorithm():
-        return None
-
 class GREEDY(Algorithm):
     def __init__(self, nOperations, maxMemory, solveTime):
-        super.__init__(nOperations, maxMemory, solveTime)
+        super().__init__(nOperations, maxMemory, solveTime)
     
     def getNOperations(self):
         return super().getNOperations()
@@ -144,7 +175,7 @@ class GREEDY(Algorithm):
 
 class ASTAR(Algorithm):
     def __init__(self, nOperations, maxMemory, solveTime):
-        super.__init__(nOperations, maxMemory, solveTime)
+        super().__init__(nOperations, maxMemory, solveTime)
 
     def getNOperations(self):
         return super().getNOperations()
@@ -200,7 +231,7 @@ class ASTAR(Algorithm):
 
 class WEIGHTEDASTAR(ASTAR):
     def __init__(self, nOperations, maxMemory, solveTime):
-        super.__init__(nOperations, maxMemory, solveTime)
+        super().__init__(nOperations, maxMemory, solveTime)
     
     def getNOperations(self):
         return super().getNOperations()

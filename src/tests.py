@@ -1,82 +1,147 @@
 from algortihms import *
+from atomix_state import AtomixState
+import os
+import matplotlib.pyplot as plt
+
 
 class TestSuite:
     def __init__(self) -> None:
-        self.BFS = BFS(0,0,0)
-        self.DFS = DFS(0,0,0)
-        self.IDDFS = IDDFS(0,0,0)
-        self.GREEDY = GREEDY(0,0,0)
-        self.ASTAR = ASTAR(0,0,0)
-        self.WEIGHTEDASTAR = WEIGHTEDASTAR(0,0,0)
+        self.BFS = BFS()
+        self.DFS = DFS()
+        self.IDDFS = IDDFS()
+        self.GREEDY = GREEDY()
+        self.ASTAR = ASTAR()
+        self.WEIGHTEDASTAR = WEIGHTEDASTAR()
 
-    def loadMap(level):
-        return None
+    def loadMap(self, level):
+        # change filename to level + level
+        filename = f"level1.txt"
+        filepath = os.path.join("resources/test-levels", filename)
+
+        level_map = []
+        atom_map = {}
+        molecule_name_phase = None
+
+        is_molecule_read = False
+        is_atom_map_read = False
+
+        with open(filepath) as f:
+            for line in f:
+                line_strip = line.strip()
+                if molecule_name_phase is None:
+                    molecule_name_phase = line_strip
+                    continue
+                if line_strip.startswith('#'):
+                    level_map.append(line_strip)
+                    continue
+                if line_strip == '' and not is_molecule_read:
+                    is_molecule_read = True
+                    continue
+                if line_strip != '' and is_molecule_read and not is_atom_map_read:
+                    molecule_to_form = ''
+                    for c in line_strip:
+                        if c.isdigit():
+                            molecule_to_form += c
+                        elif c.isalpha():
+                            molecule_to_form += '.'
+                        else:
+                            molecule_to_form += '\n'
+                if line_strip == '' and not is_atom_map_read:
+                    is_atom_map_read = True
+                if line_strip != '' and is_atom_map_read:
+                    num, *atom_data = line_strip.split()
+                    atom, links = atom_data[0], atom_data[1:]
+                    atom_map[int(num)] = {"atom": atom, "connections": {}}
+                    for l in links:
+                        direction, neighbor_num = l[-1], int(l[:-1])
+                        atom_map[int(num)]["connections"][direction] = neighbor_num
+
+        return level_map, atom_map, molecule_name_phase, molecule_to_form
 
     def testMetrics(self):
 
+        bfsMetrics = {'solveTime': [], 'maxMemory': [], 'nOperations': []}
+        dfsMetrics = {'solveTime': [], 'maxMemory': [], 'nOperations': []}
+        iddfsMetrics = {'solveTime': [], 'maxMemory': [], 'nOperations': []}
+        greedyMetrics = {'solveTime': [], 'maxMemory': [], 'nOperations': []}
+        astarMetrics = {'solveTime': [], 'maxMemory': [], 'nOperations': []}
+        wAstarMetrics = {'solveTime': [], 'maxMemory': [], 'nOperations': []}
+
         for i in range(1,5):
 
-            map = self.loadMap("level"+i)
+            game_dataset = self.loadMap(i)
+
+            board, atom_map, molecule_name, molecule_structure = game_dataset
+
+            map = AtomixState(board, molecule_structure)
 
             self.BFS.algorithm(map)
             self.DFS.algorithm(map)
-            self.IDDFS.algorithm(map)
-            self.GREEDY.algorithm(map)
-            self.ASTAR.algorithm(map)
-            self.WEIGHTEDASTAR.algorithm(map)
+            # self.IDDFS.algorithm(map)
+            # self.GREEDY.algorithm(map)
+            # self.ASTAR.algorithm(map)
+            # self.WEIGHTEDASTAR.algorithm(map)
 
             print("\n")
             print("\n")
 
-            print("***TESTING METRICS FOR LEVEL " + i + " ***\n")
+            print("***TESTING METRICS FOR LEVEL " + str(i) + " ***\n")
 
             print("\n")
 
             print("---BFS METRICS---\n")
-            print("BFS TIME: " + self.BFS.getSolveTime + "\n")
-            print("BFS MEMORY USAGE: " + self.BFS.getMaxMemory + "\n")
-            print("BFS OPERATIONS: " + self.BFS.getNOperations + "\n")
+            print("BFS TIME: " + str(self.BFS.getSolveTime()) + " seconds\n")
+            print("BFS MEMORY USAGE: " + str(self.BFS.getMaxMemory()) + "\n")
+            print("BFS NUMBER OF OPERATIONS: " + str(self.BFS.getNOperations()) + "\n")
+
+            bfsMetrics["solveTime"].append(self.BFS.getSolveTime())
+            bfsMetrics["maxMemory"].append(self.BFS.getMaxMemory())
+            bfsMetrics["nOperations"].append(self.BFS.getNOperations())
 
             print("\n")
 
             print("---DFS METRICS---\n")
-            print("DFS TIME: " + self.DFS.getSolveTime + "\n")
-            print("DFS MEMORY USAGE: " + self.DFS.getMaxMemory + "\n")
-            print("DFS OPERATIONS: " + self.DFS.getNOperations + "\n")
+            print("DFS TIME: " + str(self.DFS.getSolveTime()) + "\n")
+            print("DFS MEMORY USAGE: " + str(self.DFS.getMaxMemory()) + "\n")
+            print("DFS OPERATIONS: " + str(self.DFS.getNOperations()) + "\n")
 
-            print("\n")
+            dfsMetrics["solveTime"] = self.DFS.getSolveTime()
+            dfsMetrics["maxMemory"] = self.DFS.getMaxMemory()
+            dfsMetrics["nOperations"] = self.DFS.getNOperations()
 
-            print("---IDDFS METRICS---\n")
-            print("IDDFS TIME: " + self.IDDFS.getSolveTime + "\n")
-            print("IDDFS MEMORY USAGE: " + self.IDDFS.getMaxMemory + "\n")
-            print("IDDFS OPERATIONS: " + self.IDDFS.getNOperations + "\n")
+            # print("\n")
 
-            print("\n")
+            # print("---IDDFS METRICS---\n")
+            # print("IDDFS TIME: " + str(self.IDDFS.getSolveTime()) + "\n")
+            # print("IDDFS MEMORY USAGE: " + str(self.IDDFS.getMaxMemory()) + "\n")
+            # print("IDDFS OPERATIONS: " + str(self.IDDFS.getNOperations()) + "\n")
 
-            print("---GREEDY METRICS---\n")
-            print("GREEDY TIME: " + self.GREEDY.getSolveTime + "\n")
-            print("GREEDY MEMORY USAGE: " + self.GREEDY.getMaxMemory + "\n")
-            print("GREEDY OPERATIONS: " + self.GREEDY.getNOperations + "\n")
+            # print("\n")
 
-            print("\n")
+            # print("---GREEDY METRICS---\n")
+            # print("GREEDY TIME: " + str(self.GREEDY.getSolveTime()) + "\n")
+            # print("GREEDY MEMORY USAGE: " + str(self.GREEDY.getMaxMemory()) + "\n")
+            # print("GREEDY OPERATIONS: " + str(self.GREEDY.getNOperations()) + "\n")
 
-            print("---A* METRICS---\n")
-            print("A* TIME: " + self.ASTAR.getSolveTime + "\n")
-            print("A* MEMORY USAGE: " + self.ASTAR.getMaxMemory + "\n")
-            print("A* OPERATIONS: " + self.ASTAR.getNOperations + "\n")
+            # print("\n")
 
-            print("\n")
+            # print("---A* METRICS---\n")
+            # print("A* TIME: " + str(self.ASTAR.getSolveTime()) + "\n")
+            # print("A* MEMORY USAGE: " + str(self.ASTAR.getMaxMemory()) + "\n")
+            # print("A* OPERATIONS: " + str(self.ASTAR.getNOperations()) + "\n")
 
-            print("---WEIGHTEDASTAR METRICS---\n")
-            print("WEIGHTED A* TIME: " + self.WEIGHTEDASTAR.getSolveTime + "\n")
-            print("WEIGHTED A* MEMORY USAGE: " + self.WEIGHTEDASTAR.getMaxMemory + "\n")
-            print("WEIGHTED A* OPERATIONS: " + self.WEIGHTEDASTAR.getNOperations + "\n")
+            # print("\n")
 
-            print("\n")
+            # print("---WEIGHTEDASTAR METRICS---\n")
+            # print("WEIGHTED A* TIME: " + str(self.WEIGHTEDASTAR.getSolveTime()) + "\n")
+            # print("WEIGHTED A* MEMORY USAGE: " + str(self.WEIGHTEDASTAR.getMaxMemory()) + "\n")
+            # print("WEIGHTED A* OPERATIONS: " + str(self.WEIGHTEDASTAR.getNOperations()) + "\n")
 
-            print("***END OF METRICS TEST FOR LEVEL " + i + " ***\n")
+            # print("\n")
 
-        return None
+            # print("***END OF METRICS TEST FOR LEVEL " + i + " ***\n")
+
+        return bfsMetrics
 
 
     def bfsTest(self):
@@ -150,6 +215,7 @@ class TestSuite:
         return None
     
     def weightedAstarTest(self):
+
         expectedSolution = []
 
         calculatedSolution = self.WEIGHTEDASTAR.algorithm(map)
@@ -162,3 +228,40 @@ class TestSuite:
             print("Calculated Solution: " + calculatedSolution + "\n")
 
         return None
+    
+def main():
+
+    test = TestSuite()
+
+    bfsMetrics = test.testMetrics()
+
+    levels = [1, 2, 3, 4]
+
+    # /// TIME GRAPH PLOT FOR ALL ALGORITHMS FOR 5 LEVELS ///
+
+    bfs_time_values = bfsMetrics["solveTime"]
+    # dfs_time_values = dfsMetrics["solveTime"]
+    # iddfs_time_values = dfsMetrics["solveTime"]
+    # greedy_time_values = greedyMetrics["solveTime"]
+    # astar_time_values = astarMetrics["solveTime"]
+    # wAstar_time_values = wAstarMetrics["solveTime"]
+
+    plt.plot(levels, bfs_time_values)
+    # plt.plot(levels, dfs_time_values)
+    # plt.plot(levels, iddfs_time_values)
+    # plt.plot(levels, greedy_time_values)
+    # plt.plot(levels, astar_time_values)
+    # plt.plot(levels, wAstar_time_values)
+
+    plt.show()
+
+    # /// MAX MEMORY GRAPH PLOT FOR ALL ALGORITHMS FOR 5 LEVELS ///
+
+    bfs_mem_values = bfsMetrics["maxMemory"]
+
+    # /// NUMBER OF OPERATIONS GRAPH PLOT FOR ALL ALGORITHMS FOR 5 LEVELS ///
+
+    return None
+
+if __name__ == "__main__":
+    main()
