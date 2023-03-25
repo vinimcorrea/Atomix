@@ -76,7 +76,7 @@ class TestSuite:
             map = AtomixState(board, molecule_structure)
 
             self.BFS.algorithm(map)
-            self.DFS.algorithm(map)
+            # self.DFS.algorithm(map)
             # self.IDDFS.algorithm(map)
             # self.GREEDY.algorithm(map)
             # self.ASTAR.algorithm(map)
@@ -100,14 +100,14 @@ class TestSuite:
 
             print("\n")
 
-            print("---DFS METRICS---\n")
-            print("DFS TIME: " + str(self.DFS.getSolveTime()) + "\n")
-            print("DFS MEMORY USAGE: " + str(self.DFS.getMaxMemory()) + "\n")
-            print("DFS OPERATIONS: " + str(self.DFS.getNOperations()) + "\n")
+            # print("---DFS METRICS---\n")
+            # print("DFS TIME: " + str(self.DFS.getSolveTime()) + "\n")
+            # print("DFS MEMORY USAGE: " + str(self.DFS.getMaxMemory()) + "\n")
+            # print("DFS OPERATIONS: " + str(self.DFS.getNOperations()) + "\n")
 
-            dfsMetrics["solveTime"] = self.DFS.getSolveTime()
-            dfsMetrics["maxMemory"] = self.DFS.getMaxMemory()
-            dfsMetrics["nOperations"] = self.DFS.getNOperations()
+            # dfsMetrics["solveTime"] = self.DFS.getSolveTime()
+            # dfsMetrics["maxMemory"] = self.DFS.getMaxMemory()
+            # dfsMetrics["nOperations"] = self.DFS.getNOperations()
 
             # print("\n")
 

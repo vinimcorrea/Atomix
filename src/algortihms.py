@@ -21,10 +21,9 @@ class Algorithm:
     def getSolveTime(self):
         return self.solveTime
 
-
 class BFS(Algorithm):
-    def __init__(self, nOperations, maxMemory, solveTime):
-        super().__init__(nOperations, maxMemory, solveTime)
+    def __init__(self):
+        super().__init__()
 
     def getNOperations(self):
         return super().getNOperations()
@@ -60,11 +59,10 @@ class BFS(Algorithm):
                     queue.append(child)
 
         return "No Solution Found"
-    
 
 class DFS(Algorithm):
-    def __init__(self, nOperations, maxMemory, solveTime):
-        super().__init__(nOperations, maxMemory, solveTime)
+    def __init__(self):
+        super().__init__()
 
     def getNOperations(self):
         return super().getNOperations()
@@ -109,8 +107,8 @@ class DFS(Algorithm):
         return result
 
 class IDDFS(Algorithm):
-    def __init__(self, nOperations, maxMemory, solveTime):
-        super().__init__(nOperations, maxMemory, solveTime)
+    def __init__(self):
+        super().__init__()
 
     def getNOperations(self):
         return super().getNOperations()
@@ -142,8 +140,8 @@ class IDDFS(Algorithm):
         return False   
 
 class GREEDY(Algorithm):
-    def __init__(self, nOperations, maxMemory, solveTime):
-        super().__init__(nOperations, maxMemory, solveTime)
+    def __init__(self):
+        super().__init__()
     
     def getNOperations(self):
         return super().getNOperations()
@@ -174,8 +172,8 @@ class GREEDY(Algorithm):
         return None
 
 class ASTAR(Algorithm):
-    def __init__(self, nOperations, maxMemory, solveTime):
-        super().__init__(nOperations, maxMemory, solveTime)
+    def __init__(self):
+        super().__init__()
 
     def getNOperations(self):
         return super().getNOperations()
@@ -230,8 +228,8 @@ class ASTAR(Algorithm):
         return "Wasn't able to find a solution"
 
 class WEIGHTEDASTAR(ASTAR):
-    def __init__(self, nOperations, maxMemory, solveTime):
-        super().__init__(nOperations, maxMemory, solveTime)
+    def __init__(self):
+        super().__init__()
     
     def getNOperations(self):
         return super().getNOperations()
