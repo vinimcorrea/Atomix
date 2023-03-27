@@ -46,14 +46,23 @@ class AtomixState:
                     atoms[self.board[row][col]] = (row, col)
 
         target_bonds = []
-        for i in range(len(molecule_struc) - 1):
-            atom1 = molecule_struc[i]
-            atom2 = molecule_struc[i + 1]
-            bond = (atom1, atom2)
-            target_bonds.append(bond)
+        directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+
+        for row in range(len(molecule_struc)):
+            for col in range(len(molecule_struc[0])):
+                if molecule_struc[row][col] != '.':
+                    atom1 = molecule_struc[row][col]
+                    for dr, dc in directions:
+                        new_row = row + dr
+                        new_col = col + dc
+                        if 0 <= new_row < len(molecule_struc) and 0 <= new_col < len(molecule_struc[0]):
+                            atom2 = molecule_struc[new_row][new_col]
+                            if atom2 != '.':
+                                bond = (min(atom1, atom2), max(atom1, atom2))
+                                if bond not in target_bonds:
+                                    target_bonds.append(bond)
 
         current_bonds = []
-
         # Check adjacent atoms for existing bonds using Manhattan distance
         for atom, position in atoms.items():
             for other_atom, other_position in atoms.items():
@@ -262,18 +271,18 @@ class AtomixState:
         return self.atomic_structure["current_bonds"] == self.atomic_structure["target_bonds"]
 
     # Add this method to the GameState class:
-    def move_cursor(self, cursor_position, move_direction, cell_size, board_y_offset):
+    def move_cursor(self, cursor_position, move_direction, cell_size, board_y_offset, board_x_offset):
         x, y = cursor_position
         dx, dy = move_direction
-        new_x = max(0, min(self.board_width * cell_size - cell_size, x + dx * cell_size))
+        new_x = max(board_x_offset, min(board_x_offset + (self.board_width - 1) * cell_size, x + dx * cell_size))
         new_y = max(board_y_offset, min(board_y_offset + (self.board_width - 1) * cell_size, y + dy * cell_size))
 
-        return (new_x, new_y)
+        return new_x, new_y
 
-    def get_atom_at(self, position, cell_size, board_y_offset):
+    def get_atom_at(self, position, cell_size, board_y_offset, board_x_offset):
         x, y = position
         row = (y - board_y_offset) // cell_size
-        col = x // cell_size
+        col = (x - board_x_offset) // cell_size
 
         if 0 <= row < len(self.board) and 0 <= col < len(self.board[0]):
             if self.board[row][col] != "." and self.board[row][col] != "#":

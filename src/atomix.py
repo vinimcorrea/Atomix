@@ -1,30 +1,22 @@
 # import libraries
-
-import sys
 from enum import Enum
-import itertools
-import random
 import pygame
 from pygame import *
 import os
 import sys
-import time
 import heapq  # we'll be using a heap to store the states
 import math
 from copy import deepcopy
 
 from atomix_state import AtomixState
 from collections import deque
-from queue import PriorityQueue
-
-
 
 # initialize pygame
 pygame.init()
 
 # set up the display
-WINDOW_WIDTH = 1024
-WINDOW_HEIGHT = 768
+WINDOW_WIDTH = 900
+WINDOW_HEIGHT = 650
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 pygame.display.set_caption("Atomix")
 WALL_TEXTURE = pygame.image.load('resources/assets/wall.jpg').convert()
@@ -34,11 +26,11 @@ clock = pygame.time.Clock()
 
 # set up the game variables
 FPS = 60
-CELL_SIZE = 60
+CELL_SIZE = 40
 LINE_WIDTH = 4
 WALL = "#"
 BLANK_SPACE = "."
-LEVEL = 1
+LEVEL = 3
 
 # Define colors
 BLACK = (0, 0, 0)
@@ -54,19 +46,20 @@ LINE_COLOR = (255, 255, 255)  # Bright white
 CURSOR_COLOR = (255, 0, 0)  # red color for the cursor
 BUTTON_COLOR = (128, 128, 0)
 ATOM_COLORS = {
-    'C': (0, 0, 0),  # black
+    'C': (0, 255, 0),  # green
     'H': (255, 255, 255),  # white
     'N': (255, 0, 0),  # red
     'O': (255, 255, 0)  # yellow
 }
 
 # set up the fonts
-FONT_SMALL =  pygame.font.SysFont('Arial', 15)
+FONT_SMALL = pygame.font.SysFont('Arial', 15)
 FONT_MEDIUM = pygame.font.SysFont('Arial', 30)
 
 
 # Calculate the offset for the board to go down
-board_y_offset = 100
+board_y_offset = 150
+board_x_offset = 20
 
 
 # Define the Mode Enum
@@ -116,7 +109,7 @@ def draw_menu():
 
 
 def draw_reset_button():
-    reset_button = pygame.Rect(WINDOW_WIDTH - 110, 300, 100, 40)
+    reset_button = pygame.Rect(WINDOW_WIDTH // 2, 300, 100, 40)
     pygame.draw.rect(screen, BUTTON_COLOR, reset_button)
     reset_text = FONT_MEDIUM.render("Reset", True, BLACK)
     reset_text_rect = reset_text.get_rect(center=reset_button.center)
@@ -129,13 +122,14 @@ def reset_button_clicked(x, y, reset_button_rect):
 
 
 def read_level(level_number):
-    filename = f"level{level_number}-water.txt"
+    filename = f"level{level_number}.txt"
     filepath = os.path.join("resources/levels", filename)
 
     level_map = []
     atom_map = {}
     molecule_name_phase = None
 
+    molecule_to_form = []
     is_molecule_read = False
     is_atom_map_read = False
 
@@ -145,24 +139,17 @@ def read_level(level_number):
             if molecule_name_phase is None:
                 molecule_name_phase = line_strip
                 continue
-            if line_strip.startswith('#'):
-                level_map.append(line_strip)
-                continue
-            if line_strip == '' and not is_molecule_read:
-                is_molecule_read = True
-                continue
-            if line_strip != '' and is_molecule_read and not is_atom_map_read:
-                molecule_to_form = ''
-                for c in line_strip:
-                    if c.isdigit():
-                        molecule_to_form += c
-                    elif c.isalpha():
-                        molecule_to_form += '.'
-                    else:
-                        molecule_to_form += '\n'
-            if line_strip == '' and not is_atom_map_read:
-                is_atom_map_read = True
-            if line_strip != '' and is_atom_map_read:
+            if not is_molecule_read:
+                if line_strip.startswith('#'):
+                    level_map.append(line_strip)
+                elif line_strip == '':
+                    is_molecule_read = True
+            elif not is_atom_map_read:
+                if line_strip != '':
+                    molecule_to_form.append(line_strip)
+                elif line_strip == '':
+                    is_atom_map_read = True
+            else:
                 num, *atom_data = line_strip.split()
                 atom, links = atom_data[0], atom_data[1:]
                 atom_map[int(num)] = {"atom": atom, "connections": {}}
@@ -173,38 +160,53 @@ def read_level(level_number):
     return AtomixState(level_map, molecule_to_form, atom_map, molecule_name_phase)
 
 
-def draw_target_molecule(state, atom_map):
-    molecule_rect = pygame.Surface((CELL_SIZE * 2, CELL_SIZE * 2 * len(state.molecule)))
-    molecule_rect.fill(WHITE)
 
-    for idx, atom in enumerate(state.molecule):
-        atom_type = atom_map[atom]["atom"]
-        atom_connections = atom_map[atom]['connections']
-        cell_size = int(CELL_SIZE * 0.7)
+def draw_target_molecule(molecule_str, atom_map):
+    molecule_surf = pygame.Surface((200, 200), pygame.SRCALPHA)
+    molecule_surf.fill((0, 0, 0, 0))
 
-        atom_image = pygame.image.load(ATOM_SPRITES[atom_type])
-        atom_image = pygame.transform.scale(atom_image, (cell_size, cell_size))
+    offset_x = 0
+    offset_y = 50
 
-        atom_rect = atom_image.get_rect(center=(CELL_SIZE, idx * 2 * CELL_SIZE + CELL_SIZE))
-        molecule_rect.blit(atom_image, atom_rect.topleft)
+    for row_idx, row in enumerate(molecule_str):
+        for col_idx, atom_num in enumerate(row):
+            if atom_num.isdigit():
+                atom_type = atom_map[int(atom_num)]["atom"]
+                atom_connections = atom_map[int(atom_num)]['connections']
+                cell_size = int(CELL_SIZE * 0.7)
 
-        for direction, distance in atom_connections.items():
-            x_offset, y_offset = 0, 0
-            if direction == "U":
-                y_offset = -distance * CELL_SIZE // 2
-            elif direction == "D":
-                y_offset = distance * CELL_SIZE // 2
-            elif direction == "L":
-                x_offset = -distance * CELL_SIZE // 2
-            elif direction == "R":
-                x_offset = distance * CELL_SIZE // 2
+                atom_rect = pygame.Rect(col_idx * CELL_SIZE + (CELL_SIZE - cell_size) // 2 + offset_x,
+                                        row_idx * CELL_SIZE + (CELL_SIZE - cell_size) // 2 + offset_y,
+                                        cell_size, cell_size)
 
-            src_center = atom_rect.center
-            pygame.draw.line(molecule_rect, GRAY, src_center,
-                             (src_center[0] + x_offset, src_center[1] + y_offset), width=13)
+                # Draw lines between atoms based on their connections
+                for direction, distance in atom_connections.items():
+                    x_offset, y_offset = 0, 0
+                    if direction == "U":
+                        y_offset = -distance * CELL_SIZE // 2
+                    elif direction == "D":
+                        y_offset = distance * CELL_SIZE // 2
+                    elif direction == "L":
+                        x_offset = -distance * CELL_SIZE // 2
+                    elif direction == "R":
+                        x_offset = distance * CELL_SIZE // 2
 
-    molecule_image_rect = molecule_rect.get_rect(topright=(WINDOW_WIDTH - 10, 150))
-    screen.blit(molecule_rect, molecule_image_rect)
+                    src_center = atom_rect.center
+                    pygame.draw.line(molecule_surf, GRAY, src_center,
+                                     (src_center[0] + x_offset, src_center[1] + y_offset), width=13)
+
+                # Draw diamond shape
+                diamond_points = [(atom_rect.centerx, atom_rect.top), (atom_rect.right, atom_rect.centery),
+                                  (atom_rect.centerx, atom_rect.bottom), (atom_rect.left, atom_rect.centery)]
+                pygame.draw.polygon(molecule_surf, ATOM_COLORS[atom_type], diamond_points)
+
+                text_surface = FONT_MEDIUM.render(atom_type, True, BLACK)
+                text_rect = text_surface.get_rect(center=atom_rect.center)
+                molecule_surf.blit(text_surface, text_rect)
+
+    molecule_image_rect = molecule_surf.get_rect(topright=(WINDOW_WIDTH - 10, 150))
+    screen.blit(molecule_surf, molecule_image_rect)
+
 
 
 # Draws the game board and atoms on the screen into the respective level
@@ -236,18 +238,19 @@ def draw_level(state, cursor_position):
     wall_texture = pygame.transform.scale(pygame.image.load("resources/assets/wall.jpg"), (CELL_SIZE, CELL_SIZE))
     cursor_col, cursor_row = cursor_position
     cursor_row = (cursor_row - board_y_offset) // CELL_SIZE
-    cursor_col = cursor_col // CELL_SIZE
+    cursor_col = (cursor_col - board_x_offset) // CELL_SIZE
 
     # Ensure the cursor is within the board boundaries
     cursor_row = max(0, min(board_height - 1, cursor_row))
     cursor_col = max(0, min(board_width - 1, cursor_col))
 
     draw_reset_button()
+    draw_target_molecule(state.molecule, atom_map)
 
 
     for row in range(board_height):
         for col in range(board_width):
-            cell_rect = pygame.Rect(col * CELL_SIZE, row * CELL_SIZE + board_y_offset, CELL_SIZE, CELL_SIZE)
+            cell_rect = pygame.Rect(col * CELL_SIZE + board_x_offset, row * CELL_SIZE + board_y_offset, CELL_SIZE, CELL_SIZE)
             pygame.draw.rect(screen, BOARD_COLOR, cell_rect, 1)
             if board[row][col] == BLANK_SPACE:
                 continue
@@ -259,7 +262,7 @@ def draw_level(state, cursor_position):
                 atom_type = atom_map[atom_num]["atom"]
                 atom_connections = atom_map[atom_num]['connections']
                 cell_size = int(CELL_SIZE * 0.7)
-                atom_rect = pygame.Rect(col * CELL_SIZE + (CELL_SIZE - cell_size) // 2,
+                atom_rect = pygame.Rect(col * CELL_SIZE + (CELL_SIZE - cell_size) // 2 + board_x_offset,
                                         row * CELL_SIZE + (CELL_SIZE - cell_size) // 2 + board_y_offset,
                                         cell_size, cell_size)
 
@@ -289,7 +292,7 @@ def draw_level(state, cursor_position):
                 screen.blit(text_surface, text_rect)
 
                 # Draw the cursor after drawing the atoms and walls
-                cursor_rect = pygame.Rect(cursor_col * CELL_SIZE, cursor_row * CELL_SIZE + board_y_offset, CELL_SIZE,
+                cursor_rect = pygame.Rect(cursor_col * CELL_SIZE + board_x_offset, cursor_row * CELL_SIZE + board_y_offset, CELL_SIZE,
                                           CELL_SIZE)
                 pygame.draw.rect(screen, CURSOR_COLOR, cursor_rect, 3)  # 3 is the line width for the cursor rectangle
 
@@ -523,7 +526,7 @@ def main():
                     }[event.key]
 
                     if selected_atom is None:
-                        cursor_position = game_state.move_cursor(cursor_position, move_direction, CELL_SIZE, board_y_offset)
+                        cursor_position = game_state.move_cursor(cursor_position, move_direction, CELL_SIZE, board_y_offset, board_x_offset)
                     else:
                         atom_row, atom_col = game_state.atomic_structure["atoms"][selected_atom]
                         move_function = {
@@ -539,7 +542,7 @@ def main():
                             selected_atom = None
                 elif event.key == pygame.K_SPACE:
                     if selected_atom is None:
-                        selected_atom = game_state.get_atom_at(cursor_position, CELL_SIZE, board_y_offset)
+                        selected_atom = game_state.get_atom_at(cursor_position, CELL_SIZE, board_y_offset, board_x_offset)
                     else:
                         selected_atom = None
 
@@ -548,7 +551,7 @@ def main():
 
         # display move count
         move_count_text = FONT_MEDIUM.render(f"Moves: {move_count}", True, BLACK)
-        move_count_rect = move_count_text.get_rect(topleft=(20, WINDOW_HEIGHT - 40))
+        move_count_rect = move_count_text.get_rect(center=(WINDOW_WIDTH - 100, WINDOW_HEIGHT // 2 + 50))
         screen.blit(move_count_text, move_count_rect)
 
         pygame.display.update()
