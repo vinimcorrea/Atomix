@@ -15,6 +15,7 @@ class AtomixState:
         self.atom_map = atom_map
         self.molecule_name = molecule_name_phase
         self.board_width = len(board[0])
+        self.game_won = False
         self.cost = cost
 
         # create an empty array and append move_history
@@ -133,7 +134,7 @@ class AtomixState:
 
         self.cost += 1
 
-        self.update_bonds(atom)
+        self.update_bonds()
 
         return True
 
@@ -174,7 +175,7 @@ class AtomixState:
 
         self.cost += 1
 
-        self.update_bonds(atom)
+        self.update_bonds()
 
         return True
 
@@ -210,7 +211,7 @@ class AtomixState:
 
         self.cost += 1
 
-        self.update_bonds(atom)
+        self.update_bonds()
 
         return True
 
@@ -245,27 +246,26 @@ class AtomixState:
 
         self.cost += 1
 
-        self.update_bonds(atom)
+        self.update_bonds()
 
         return True
 
-    def update_bonds(self, atom_moved):
-        atoms = self.atomic_structure['atoms']
-        moved_atom_position = atoms[atom_moved]
-        target_bonds = self.atomic_structure['target_bonds']
-        current_bonds = self.atomic_structure['current_bonds']
+    def update_bonds(self):
+        new_bonds = []
+        directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
 
-        for atom, position in atoms.items():
-            if atom != atom_moved:
-                row_diff = abs(moved_atom_position[0] - position[0])
-                col_diff = abs(moved_atom_position[1] - position[1])
+        for atom, position in self.atomic_structure["atoms"].items():
+            for dr, dc in directions:
+                new_row = position[0] + dr
+                new_col = position[1] + dc
+                if 0 <= new_row < len(self.board) and 0 <= new_col < len(self.board[0]):
+                    other_atom = self.board[new_row][new_col]
+                    if other_atom != '.' and other_atom != '#':
+                        bond_pair = (atom, other_atom) if atom < other_atom else (other_atom, atom)
+                        if bond_pair in self.atomic_structure["target_bonds"] and bond_pair not in new_bonds:
+                            new_bonds.append(bond_pair)
 
-                # Check if the atoms are adjacent
-                if (row_diff == 1 and col_diff == 0) or (row_diff == 0 and col_diff == 1):
-                    bond_pair = (atom_moved, atom) if atom_moved < atom else (atom, atom_moved)
-                    if bond_pair not in current_bonds:
-                        if bond_pair in target_bonds:
-                                current_bonds.append(bond_pair)
+        self.atomic_structure["current_bonds"] = new_bonds
 
     def is_molecule_formed(self):
         return self.atomic_structure["current_bonds"] == self.atomic_structure["target_bonds"]

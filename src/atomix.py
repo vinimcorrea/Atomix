@@ -7,6 +7,7 @@ import sys
 import heapq  # we'll be using a heap to store the states
 import math
 from copy import deepcopy
+import re
 
 from atomix_state import AtomixState
 from collections import deque
@@ -30,7 +31,7 @@ CELL_SIZE = 40
 LINE_WIDTH = 4
 WALL = "#"
 BLANK_SPACE = "."
-LEVEL = 3
+LEVEL = 1
 
 # Define colors
 BLACK = (0, 0, 0)
@@ -108,6 +109,16 @@ def draw_menu():
     return computer_button_rect, human_button_rect
 
 
+def draw_back_to_menu_button():
+    back_to_menu_text = FONT_MEDIUM.render("Back to Menu", True, BLACK)
+    back_to_menu_rect = back_to_menu_text.get_rect(topleft=(20, 20))
+    back_to_menu_button_rect = pygame.Rect(back_to_menu_rect.x - 5, back_to_menu_rect.y - 5, back_to_menu_rect.width + 10, back_to_menu_rect.height + 10)
+    pygame.draw.rect(screen, WHITE, back_to_menu_button_rect, border_radius=5)
+    pygame.draw.rect(screen, RED, back_to_menu_button_rect, width=2, border_radius=5)
+    screen.blit(back_to_menu_text, back_to_menu_rect)
+    return back_to_menu_button_rect
+
+
 def draw_reset_button():
     reset_button = pygame.Rect(WINDOW_WIDTH // 2, 300, 100, 40)
     pygame.draw.rect(screen, BUTTON_COLOR, reset_button)
@@ -115,6 +126,10 @@ def draw_reset_button():
     reset_text_rect = reset_text.get_rect(center=reset_button.center)
     screen.blit(reset_text, reset_text_rect)
     return reset_button
+
+
+def back_to_menu_clicked(x, y, back_to_menu_rect):
+    return back_to_menu_rect.collidepoint(x, y)
 
 
 def reset_button_clicked(x, y, reset_button_rect):
@@ -140,7 +155,7 @@ def read_level(level_number):
                 molecule_name_phase = line_strip
                 continue
             if not is_molecule_read:
-                if line_strip.startswith('#'):
+                if line_strip.startswith('#') or line_strip.startswith('.'):
                     level_map.append(line_strip)
                 elif line_strip == '':
                     is_molecule_read = True
@@ -154,11 +169,12 @@ def read_level(level_number):
                 atom, links = atom_data[0], atom_data[1:]
                 atom_map[int(num)] = {"atom": atom, "connections": {}}
                 for l in links:
-                    direction, neighbor_num = l[-1], int(l[:-1])
+                    num_pattern = re.compile(r'\d+')
+                    direction = l[-1]
+                    neighbor_num = int(num_pattern.match(l).group())
                     atom_map[int(num)]["connections"][direction] = neighbor_num
 
     return AtomixState(level_map, molecule_to_form, atom_map, molecule_name_phase)
-
 
 
 def draw_target_molecule(molecule_str, atom_map):
@@ -206,7 +222,6 @@ def draw_target_molecule(molecule_str, atom_map):
 
     molecule_image_rect = molecule_surf.get_rect(topright=(WINDOW_WIDTH - 10, 150))
     screen.blit(molecule_surf, molecule_image_rect)
-
 
 
 # Draws the game board and atoms on the screen into the respective level
@@ -460,8 +475,15 @@ def draw_algorithm_selection():
     return algorithm1_button_rect, algorithm2_button_rect
 
 
+def update_game_state(game_state, move_count):
+    if game_state.is_molecule_formed():
+        game_state.game_won = True
+        move_count = 0
+        print("Congratulations, you've formed the molecule!")
+        return True, move_count
+    return False, move_count
 
-def main():
+def menu():
     mode = Mode.NONE
     while mode == Mode.NONE:
         computer_rect, human_rect = draw_menu()
@@ -475,92 +497,90 @@ def main():
                     mode = Mode.COMPUTER
                 elif human_rect.collidepoint(x, y):
                     mode = Mode.HUMAN
+    return mode
 
-    if mode == Mode.COMPUTER:
-        algorithm = None
-        while algorithm is None:
-            algorithm1_rect, algorithm2_rect = draw_algorithm_selection()
+
+def main():
+    LEVEL = 1
+    while True:
+        mode = menu()
+
+        game_over = False
+        cursor_position = (0, 0)
+        selected_atom = None
+        game_state = read_level(LEVEL)
+        move_count = 0
+
+        game_won, move_count = update_game_state(game_state, move_count)
+        if game_won:
+            LEVEL += 1
+            game_state = read_level(LEVEL)
+
+        # game loop
+        while not game_over:
+            clock.tick(FPS)
+
+            back_to_menu_rect = draw_back_to_menu_button()
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     x, y = event.pos
-                    if algorithm1_rect.collidepoint(x, y):
-                        algorithm = greedy_search
-                    elif algorithm2_rect.collidepoint(x, y):
-                        algorithm = a_star_search
-    else:
-        algorithm = None
-
-    game_over = False
-    cursor_position = (0, 0)
-    selected_atom = None
-    game_state = read_level(LEVEL)
-    move_count = 0
-
-    # game loop
-    while not game_over:
-        clock.tick(FPS)
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                x, y = event.pos
-                reset_button_rect = draw_reset_button()
-                if reset_button_clicked(x, y, reset_button_rect):
-                    game_state = read_level(LEVEL)
-                    cursor_position = (0, 0)
-                    selected_atom = None
-                    move_count = 0
-                    continue
-            elif event.type == pygame.KEYDOWN:
-                if event.key in (pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT):
-                    move_direction = {
-                        pygame.K_UP: (0, -1),
-                        pygame.K_DOWN: (0, 1),
-                        pygame.K_LEFT: (-1, 0),
-                        pygame.K_RIGHT: (1, 0),
-                    }[event.key]
-
-                    if selected_atom is None:
-                        cursor_position = game_state.move_cursor(cursor_position, move_direction, CELL_SIZE, board_y_offset, board_x_offset)
-                    else:
-                        atom_row, atom_col = game_state.atomic_structure["atoms"][selected_atom]
-                        move_function = {
-                            (0, -1): game_state.up,
-                            (0, 1): game_state.down,
-                            (-1, 0): game_state.left,
-                            (1, 0): game_state.right,
-                        }[move_direction]
-                        new_state = move_function(selected_atom, atom_row, atom_col)
-                        if new_state:
-                            move_count += 1
-                            game_state = deepcopy(new_state)
-                            selected_atom = None
-                elif event.key == pygame.K_SPACE:
-                    if selected_atom is None:
-                        selected_atom = game_state.get_atom_at(cursor_position, CELL_SIZE, board_y_offset, board_x_offset)
-                    else:
+                    reset_button_rect = draw_reset_button()
+                    if reset_button_clicked(x, y, reset_button_rect):
+                        game_state = read_level(LEVEL)
+                        cursor_position = (0, 0)
                         selected_atom = None
+                        move_count = 0
+                        continue
+                    if back_to_menu_clicked(x, y, back_to_menu_rect):
+                        main()
+                elif event.type == pygame.KEYDOWN:
+                    if event.key in (pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT):
+                        move_direction = {
+                            pygame.K_UP: (0, -1),
+                            pygame.K_DOWN: (0, 1),
+                            pygame.K_LEFT: (-1, 0),
+                            pygame.K_RIGHT: (1, 0),
+                        }[event.key]
 
-        # draw the level
-        draw_level(game_state, cursor_position)
+                        if selected_atom is None:
+                            cursor_position = game_state.move_cursor(cursor_position, move_direction, CELL_SIZE, board_y_offset, board_x_offset)
+                        else:
+                            atom_row, atom_col = game_state.atomic_structure["atoms"][selected_atom]
+                            move_function = {
+                                (0, -1): game_state.up,
+                                (0, 1): game_state.down,
+                                (-1, 0): game_state.left,
+                                (1, 0): game_state.right,
+                            }[move_direction]
+                            new_state = move_function(selected_atom, atom_row, atom_col)
+                            if new_state:
+                                move_count += 1
+                                game_state = deepcopy(new_state)
+                                game_state.update_bonds()
+                                selected_atom = None
+                                game_won, move_count = update_game_state(game_state, move_count)
+                                if game_won:
+                                    LEVEL += 1
+                                    game_state = read_level(LEVEL)
+                    elif event.key == pygame.K_SPACE:
+                        if selected_atom is None:
+                            selected_atom = game_state.get_atom_at(cursor_position, CELL_SIZE, board_y_offset, board_x_offset)
+                        else:
+                            selected_atom = None
 
-        # display move count
-        move_count_text = FONT_MEDIUM.render(f"Moves: {move_count}", True, BLACK)
-        move_count_rect = move_count_text.get_rect(center=(WINDOW_WIDTH - 100, WINDOW_HEIGHT // 2 + 50))
-        screen.blit(move_count_text, move_count_rect)
+            # draw the level
+            draw_level(game_state, cursor_position)
 
-        pygame.display.update()
+            # display move count
+            move_count_text = FONT_MEDIUM.render(f"Moves: {move_count}", True, BLACK)
+            move_count_rect = move_count_text.get_rect(center=(WINDOW_WIDTH - 100, WINDOW_HEIGHT // 2 + 50))
+            screen.blit(move_count_text, move_count_rect)
 
-        if game_state.is_molecule_formed():
-            game_over = True
-            print("Congratulations, you've formed the molecule!")
-
-        pygame.display.update()
+            pygame.display.update()
 
 
 if __name__ == "__main__":
