@@ -32,7 +32,7 @@ class AtomixState:
             for func in functions:
                 child = func(atom, atom_pos_row, atom_pos_col)
                 if child:
-                    child.update_bonds(atom)
+                    child.update_bonds()
                     children.append(child)
 
         return children

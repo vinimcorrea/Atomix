@@ -262,7 +262,6 @@ def draw_level(state, cursor_position):
     draw_reset_button()
     draw_target_molecule(state.molecule, atom_map)
 
-
     for row in range(board_height):
         for col in range(board_width):
             cell_rect = pygame.Rect(col * CELL_SIZE + board_x_offset, row * CELL_SIZE + board_y_offset, CELL_SIZE, CELL_SIZE)
@@ -351,7 +350,7 @@ def openness(state):
                 other_atom = bond[0] if bond[1] == atom else bond[1]
                 if other_atom in molecule['atoms']:
                     distance = shortest_path(state.board, molecule['atoms'][atom], molecule['atoms'][other_atom])
-                    required_distance = abs(state.molecule.index(atom) - state.molecule.index(other_atom)) - 1
+                    required_distance = abs(state.molecule[0].index(atom) - state.molecule[0].index(other_atom)) - 1
                     if distance == required_distance:
                         can_connect = True
                         break
@@ -386,7 +385,7 @@ def pairwise_distance(state):
     for bond in target_bonds:
         atom1, atom2 = bond
         distance = shortest_path(state.board, atoms[atom1], atoms[atom2])
-        required_distance = abs(state.molecule.index(atom1) - state.molecule.index(atom2)) - 1
+        required_distance = abs(state.molecule[0].index(atom1) - state.molecule[0].index(atom2)) - 1
         total_distance += abs(distance - required_distance)
     return total_distance
 
@@ -500,6 +499,14 @@ def menu():
     return mode
 
 
+def a_star_search(problem, heuristic):
+    # problem (AtomixState) - the initial state
+    # heuristic (function) - the heuristic function that takes a board (matrix), and returns an integer
+
+    # this is very similar to greedy, the difference is that it takes into account the cost of the path so far
+    return greedy_search(problem, lambda state: heuristic(state) + state.cost)
+
+
 def main():
     LEVEL = 1
     while True:
@@ -509,6 +516,7 @@ def main():
         cursor_position = (0, 0)
         selected_atom = None
         game_state = read_level(LEVEL)
+        a_star_search(game_state, heuristic)
         move_count = 0
 
         game_won, move_count = update_game_state(game_state, move_count)
@@ -612,13 +620,6 @@ def bfs(problem):
                 queue.append(child)
 
     return None
-
-def a_star_search(problem, heuristic):
-    # problem (AtomixState) - the initial state
-    # heuristic (function) - the heuristic function that takes a board (matrix), and returns an integer
-
-    # this is very similar to greedy, the difference is that it takes into account the cost of the path so far
-    return greedy_search(problem, lambda state: heuristic(state) + state.cost)
 
 def ida_star_search(problem, heuristic):
     def search(path, g, threshold):

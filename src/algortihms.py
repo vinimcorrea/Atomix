@@ -162,10 +162,6 @@ class GREEDY(Algorithm):
                     dist += min(abs(i - 4) + abs(j - 1), abs(i - 1) + abs(j - 4)) # Nearest goal position of C
         return dist
 
-    def algorithm():
-
-        return None
-
 class ASTAR(Algorithm):
     def __init__(self):
         super().__init__()
