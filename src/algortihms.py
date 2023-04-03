@@ -1,7 +1,102 @@
+import heapq
+import math
 from queue import PriorityQueue
 from collections import deque
 import time
 import tracemalloc
+from atomix_state import AtomixState
+
+def shortest_path(board, start, end):
+    rows = len(board)
+    columns = len(board[0])
+    visited = [[False for _ in range(columns)] for _ in range(rows)]
+    queue = deque([(start, 0)])  # (coordinates, path_length)
+    visited[start[0]][start[1]] = True
+
+    while queue:
+        current, path_length = queue.popleft()
+
+        if current == end:
+            return path_length
+
+        for dr, dc in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
+            nr, nc = current[0] + dr, current[1] + dc
+
+            if (0 <= nr < rows) and (0 <= nc < columns) and not visited[nr][nc] and board[nr][nc] != '#':
+                visited[nr][nc] = True
+                queue.append(((nr, nc), path_length + 1))
+
+    return float('inf')
+
+def get_closest_bonded_atom(atom, molecule):
+        closest_distance = float('inf')
+        closest_bonded_atom = None
+        atom_x, atom_y = molecule['atoms'][atom]
+        for bond in molecule['bonds']:
+            if atom in bond:
+                other_atom = bond[0] if bond[1] == atom else bond[1]
+                other_x, other_y = molecule['atoms'][other_atom]
+                distance = math.sqrt((atom_x - other_x) ** 2 + (atom_y - other_y) ** 2)
+                if distance < closest_distance:
+                    closest_distance = distance
+                    closest_bonded_atom = other_atom
+        return closest_bonded_atom
+
+def openness(state):
+    # calculate the "openness" of the state
+    # as the number of atoms that can be connected to the existing bonds
+    molecule = state.atomic_structure
+    open_atoms = 0
+    for atom in molecule['atoms']:
+        can_connect = False
+        for bond in molecule['current_bonds']:
+            if atom in bond:
+                other_atom = bond[0] if bond[1] == atom else bond[1]
+                if other_atom in molecule['atoms']:
+                    distance = shortest_path(state.board, molecule['atoms'][atom], molecule['atoms'][other_atom])
+                    required_distance = abs(state.molecule.index(atom) - state.molecule.index(other_atom)) - 1
+                    if distance == required_distance:
+                        can_connect = True
+                        break
+        if can_connect:
+            open_atoms += 1
+    return open_atoms
+
+def distance(state):
+    atoms = state.atomic_structure['atoms']
+    target_bonds = state.atomic_structure['target_bonds']
+    total_distance = 0
+    for bond in target_bonds:
+        atom1, atom2 = bond
+        total_distance += shortest_path(state.board, atoms[atom1], atoms[atom2])
+    return total_distance
+
+def pairwise_distance(state):
+    atoms = state.atomic_structure['atoms']
+    target_bonds = state.atomic_structure['target_bonds']
+    total_distance = 0
+    for bond in target_bonds:
+        atom1, atom2 = bond
+        distance = shortest_path(state.board, atoms[atom1], atoms[atom2])
+        print(state.molecule)
+        print(type(atom1))
+        required_distance = abs(state.molecule.index(atom1.strip()) - state.molecule.index(atom2.strip())) - 1
+        total_distance += abs(distance - required_distance)
+    return total_distance
+
+def heuristic(state):
+    """Calculate the heuristic value of a molecule."""
+    unbonded_pairs_distance = 0
+    atoms = state.atomic_structure['atoms']
+    current_bonds = set(state.atomic_structure['current_bonds'])
+    target_bonds = set(state.atomic_structure['target_bonds'])
+    missing_bonds = target_bonds - current_bonds
+
+    for bond in missing_bonds:
+        atom1, atom2 = bond
+        unbonded_pairs_distance += shortest_path(state.board, atoms[atom1], atoms[atom2])
+
+    return distance(state) + openness(state) + unbonded_pairs_distance + pairwise_distance(state)
 
 class Algorithm:
     def __new__(cls, *args, **kwargs):
@@ -11,6 +106,7 @@ class Algorithm:
         self.nOperations = 0
         self.maxMemory = 0
         self.solveTime = 0
+        self.nMoves = 0
     
     def getNOperations(self):
         return self.nOperations
@@ -20,6 +116,9 @@ class Algorithm:
 
     def getSolveTime(self):
         return self.solveTime
+    
+    def getNMoves(self):
+        return self.nMoves
 
 class BFS(Algorithm):
     def __init__(self):
@@ -33,6 +132,9 @@ class BFS(Algorithm):
 
     def getSolveTime(self):
         return super().getSolveTime()
+    
+    def getNMoves(self):
+        return super().getNMoves()
     
     def algorithm(self, state):
 
@@ -52,6 +154,7 @@ class BFS(Algorithm):
                 self.solveTime = end - start
                 self.maxMemory = tracemalloc.get_traced_memory()[1]
                 tracemalloc.stop()
+                self.nMoves = len(node.move_history)
                 return node.move_history
 
             for child in node.children():
@@ -73,33 +176,33 @@ class DFS(Algorithm):
     def getSolveTime(self):
         return super().getSolveTime
     
-    def dfsaux(self, state, start):
-
-        self.nOperations += 1
-
-        if state.is_molecule_formed():
-            end = time.time()
-            self.getSolveTime = end - start
-            self.maxMemory = tracemalloc.get_traced_memory()[1]
-            tracemalloc.stop()
-            return state.move_history
-
-        for child in state.children():
-            if child.board not in state.move_history:
-                result = self.dfsaux(child, start)
-                if result:
-                    return result
-
-        return None
-
+    def getNMoves(self):
+        return super().getNMoves()
+    
     def algorithm(self, state):
-
         start = time.time()
         tracemalloc.start()
+        stack = [(state, start)]
+        visited = set()
 
-        result = self.dfsaux(state, start)
+        while stack:
+            node, node_start = stack.pop()
+            self.nOperations += 1
 
-        return result
+            if node.is_molecule_formed():
+                end = time.time()
+                self.getSolveTime = end - start
+                self.maxMemory = tracemalloc.get_traced_memory()[1]
+                tracemalloc.stop()
+                self.nMoves = len(node.move_history)
+                return node.move_history
+
+
+            for child in node.children():
+                if child.board not in node.move_history:
+                    stack.append((child, node_start))
+
+        return None
 
 class IDDFS(Algorithm):
     def __init__(self):
@@ -113,26 +216,34 @@ class IDDFS(Algorithm):
 
     def getSolveTime(self):
         return super().getSolveTime
-
-    def DLS(self, node, target, limit):
-        if node.is_molecule_formed():
-            return node.move_history
-
-        if (limit <= 0):
-            return None
-
-        for child in node.children:
-            solution =  self.DLS(child, target, limit)
-            if solution is not None:
-                return solution
     
-    def algorithm(self, node, target, maxDepth):
+    def getNMoves(self):
+        return super().getNMoves()
 
-        for limit in maxDepth:
-            solution =  self.DLS(node, target, limit) == True
-            if solution is not None:
-                return True
-        return False   
+    def algorithm(self, node, maxDepth):
+
+        start = time.time()
+        tracemalloc.start()
+
+        for depth in range(maxDepth + 1):
+            stack = [(node, 0)]
+            while stack:
+                self.nOperations += 1
+                current, currentDepth = stack.pop()
+                if currentDepth > depth:
+                    continue
+                if current.is_molecule_formed():
+                    end = time.time()
+                    self.getSolveTime = end - start
+                    self.maxMemory = tracemalloc.get_traced_memory()[1]
+                    tracemalloc.stop()
+                    self.nMoves = len(current.move_history)
+                    return current.move_history
+                if currentDepth < depth:
+                    for child in current.children():
+                        if child.board not in current.move_history:
+                            stack.append((child, currentDepth + 1))
+        return None
 
 class GREEDY(Algorithm):
     def __init__(self):
@@ -146,23 +257,42 @@ class GREEDY(Algorithm):
 
     def getSolveTime(self):
         return super().getSolveTime
+    
+    def getNMoves(self):
+        return super().getNMoves()
+    
+    def algorithm(self, node):
+        # problem (NPuzzleState) - the initial state
+        # heuristic (function) - the heuristic function that takes a board (matrix), and returns an integer
+        setattr(AtomixState, "__lt__", lambda self, other: heuristic(self) < heuristic(other))
+        states = [node]
+        visited = set()  # to not visit the same state twice
 
-    def heuristic(state):
-        # Calculate the Manhattan distance between each atom and the nearest goal position
-        dist = 0
-        for i, row in enumerate(state):
-            for j, val in enumerate(row):
-                if val == 'H':
-                    dist += min(abs(i - 1) + abs(j - 4), abs(i - 4) + abs(j - 1)) # Nearest goal position of H
-                elif val == 'O':
-                    dist += min(abs(i - 2) + abs(j - 3), abs(i - 3) + abs(j - 2)) # Nearest goal position of O
-                elif val == 'N':
-                    dist += min(abs(i - 3) + abs(j - 2), abs(i - 2) + abs(j - 3)) # Nearest goal position of N
-                elif val == 'C':
-                    dist += min(abs(i - 4) + abs(j - 1), abs(i - 1) + abs(j - 4)) # Nearest goal position of C
-        return dist
+        start = time.time()
+        tracemalloc.start()
 
-class ASTAR(Algorithm):
+
+        while states:
+            state = heapq.heappop(states)
+            self.nOperations += 1
+
+            if state.is_molecule_formed():
+                end = time.time()
+                self.getSolveTime = end - start
+                self.maxMemory = tracemalloc.get_traced_memory()[1]
+                tracemalloc.stop()
+                self.nMoves = len(state.move_history)
+                return state.move_history
+
+            visited.add(state)
+
+            for child in state.children():
+                if child not in visited:
+                    heapq.heappush(states, child)
+
+        return None
+
+class ASTAR(GREEDY):
     def __init__(self):
         super().__init__()
 
@@ -174,57 +304,15 @@ class ASTAR(Algorithm):
 
     def getSolveTime(self):
         return super().getSolveTime
+    
+    def getNMoves(self):
+        return super().getNMoves()
 
     def heuristic(state):
-        dist = 0
-        # numbers 1-4 are placeholders for now, they should be the target coordinates for each atom 
-        for i, row in enumerate(state):
-            for j, val in enumerate(row):
-                if val == 'H':
-                    dist += abs(i - 1) + abs(j - 4) # Goal position of H
-                elif val == 'O':
-                    dist += abs(i - 2) + abs(j - 3) # Goal position of O
-                elif val == 'N':
-                    dist += abs(i - 3) + abs(j - 2) # Goal position of N
-                elif val == 'C':
-                    dist += abs(i - 4) + abs(j - 1) # Goal position of C
-        return dist
+        return lambda: super().heuristic(state) + state.cost
 
     def algorithm(self, state):
-
-        start = time.time()
-        tracemalloc.start()
-
-        queue = PriorityQueue()
-        currentCost = {}
-        cameFrom = {}
-
-        currentCost[state] = 0
-        cameFrom[state] = None
-
-        queue.put(state, 0)
-
-        while not queue.empty():
-            currentNode = queue.get()
-            self.nOperations += 1
-
-            if currentNode.is_molecule_formed():
-                end = time.time()
-                self.solveTime = end - start
-                self.maxMemory = tracemalloc.get_traced_memory()[1]
-                tracemalloc.stop()
-                return state.move_history
-
-            for child in currentNode.children:
-                childCost = currentCost[currentNode] + 1
-
-                if child not in currentCost or childCost < currentCost[child]:
-                    currentCost[child] = childCost
-                    priority = childCost + self.heuristic(child)
-                    queue.put(child, priority)
-                    cameFrom[child] = currentNode
-
-        return "Wasn't able to find a solution"
+        return super().algorithm(state, self.heuristic(state))
 
 class WEIGHTEDASTAR(ASTAR):
 
@@ -239,6 +327,9 @@ class WEIGHTEDASTAR(ASTAR):
 
     def getSolveTime(self):
         return super().getSolveTime
+    
+    def getNMoves(self):
+        return super().getNMoves()
 
     def heuristic(state, weightFactor):
       
@@ -260,6 +351,44 @@ class IDASTAR(Algorithm):
     def getSolveTime(self):
         return super().getSolveTime
     
-    def algorithm(self):
-        return None
+    def getNMoves(self):
+        return super().getNMoves()
+    
+    def algorithm(self, node):
+        def search(path, g, threshold):
+            state = path[-1]
+            f = g + heuristic(state)
+            if f > threshold:
+                return f
+            if state.is_molecule_formed():
+                end = time.time()
+                self.getSolveTime = end - start
+                self.maxMemory = tracemalloc.get_traced_memory()[1]
+                tracemalloc.stop()
+                self.nMoves = len(state.move_history)
+                return state.move_history
+            min_threshold = float('inf')
+            for child in state.children():
+                if child not in path:
+                    path.append(child)
+                    t = search(path, g + 1, threshold)
+                    if t is None:
+                        return None
+                    if t < min_threshold:
+                        min_threshold = t
+                    path.pop()
+            return min_threshold
+
+        threshold = heuristic(node)
+        path = [node]
+
+        start = time.time()
+        tracemalloc.start()
+
+        while True:
+            self.nOperations += 1
+            t = search(path, 0, threshold)
+            if t is None:
+                return path[1:]
+            threshold = t
     
