@@ -78,8 +78,7 @@ def pairwise_distance(state):
     for bond in target_bonds:
         atom1, atom2 = bond
         distance = shortest_path(state.board, atoms[atom1], atoms[atom2])
-        print(state.molecule)
-        print(type(atom1))
+        print(type(state.molecule[0]))
         required_distance = abs(state.molecule.index(atom1.strip()) - state.molecule.index(atom2.strip())) - 1
         total_distance += abs(distance - required_distance)
     return total_distance
@@ -197,9 +196,10 @@ class DFS(Algorithm):
                 self.nMoves = len(node.move_history)
                 return node.move_history
 
+            visited.add(node)
 
             for child in node.children():
-                if child.board not in node.move_history:
+                if child not in visited:
                     stack.append((child, node_start))
 
         return None
@@ -222,6 +222,7 @@ class IDDFS(Algorithm):
 
     def algorithm(self, node, maxDepth):
 
+        visited = set()
         start = time.time()
         tracemalloc.start()
 
@@ -232,6 +233,7 @@ class IDDFS(Algorithm):
                 current, currentDepth = stack.pop()
                 if currentDepth > depth:
                     continue
+                visited.add(current)
                 if current.is_molecule_formed():
                     end = time.time()
                     self.getSolveTime = end - start
@@ -241,7 +243,7 @@ class IDDFS(Algorithm):
                     return current.move_history
                 if currentDepth < depth:
                     for child in current.children():
-                        if child.board not in current.move_history:
+                        if child not in visited:
                             stack.append((child, currentDepth + 1))
         return None
 
@@ -262,7 +264,7 @@ class GREEDY(Algorithm):
         return super().getNMoves()
     
     def algorithm(self, node):
-        # problem (NPuzzleState) - the initial state
+        # node (NPuzzleState) - the initial state
         # heuristic (function) - the heuristic function that takes a board (matrix), and returns an integer
         setattr(AtomixState, "__lt__", lambda self, other: heuristic(self) < heuristic(other))
         states = [node]
@@ -309,7 +311,7 @@ class ASTAR(GREEDY):
         return super().getNMoves()
 
     def heuristic(state):
-        return lambda: super().heuristic(state) + state.cost
+        return lambda state: super().heuristic(state) + state.cost
 
     def algorithm(self, state):
         return super().algorithm(state, self.heuristic(state))
