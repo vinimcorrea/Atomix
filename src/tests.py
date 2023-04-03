@@ -58,7 +58,7 @@ class TestSuite:
 
         return level_map, atom_map, molecule_name_phase, molecule_to_form
 
-    def testMetrics(self):
+    def testMetrics(self):  
 
         bfsMetrics = {'solveTime': [], 'maxMemory': [], 'nOperations': []}
         dfsMetrics = {'solveTime': [], 'maxMemory': [], 'nOperations': []}
@@ -141,8 +141,7 @@ class TestSuite:
 
             # print("***END OF METRICS TEST FOR LEVEL " + i + " ***\n")
 
-        return bfsMetrics
-
+        return bfsMetrics, dfsMetrics
 
     def bfsTest(self):
         expectedSolution = []
@@ -233,35 +232,59 @@ def main():
 
     test = TestSuite()
 
-    bfsMetrics = test.testMetrics()
+    bfsMetrics, dfsMetrics = test.testMetrics()
 
     levels = [1, 2, 3, 4]
+
+    figure, axis = plt.subplots(1, 3)
+
+    axis[0].set_title("Solve Time")
+    axis[1].set_title("Max Memory Usage")
+    axis[2].set_title("Number of Operations")
 
     # /// TIME GRAPH PLOT FOR ALL ALGORITHMS FOR 5 LEVELS ///
 
     bfs_time_values = bfsMetrics["solveTime"]
-    # dfs_time_values = dfsMetrics["solveTime"]
+    dfs_time_values = dfsMetrics["solveTime"]
     # iddfs_time_values = dfsMetrics["solveTime"]
     # greedy_time_values = greedyMetrics["solveTime"]
     # astar_time_values = astarMetrics["solveTime"]
     # wAstar_time_values = wAstarMetrics["solveTime"]
 
-    plt.plot(levels, bfs_time_values)
+    axis[0].plot(levels, bfs_time_values)
     # plt.plot(levels, dfs_time_values)
     # plt.plot(levels, iddfs_time_values)
     # plt.plot(levels, greedy_time_values)
     # plt.plot(levels, astar_time_values)
     # plt.plot(levels, wAstar_time_values)
 
-    plt.show()
-
     # /// MAX MEMORY GRAPH PLOT FOR ALL ALGORITHMS FOR 5 LEVELS ///
 
     bfs_mem_values = bfsMetrics["maxMemory"]
+    # dfs_mem_values = dfsMetrics["maxMemory"]
+    # iddfs_mem_values = dfsMetrics["maxMemory"]
+    # greedy_mem_values = greedyMetrics["maxMemory"]
+    # astar_mem_values = astarMetrics["maxMemory"]
+    # wAstar_mem_values = wAstarMetrics["maxMemory"]
+
+    axis[1].plot(levels, bfs_mem_values)
+
 
     # /// NUMBER OF OPERATIONS GRAPH PLOT FOR ALL ALGORITHMS FOR 5 LEVELS ///
+
+    bfs_op_values = bfsMetrics["nOperations"]
+    # dfs_op_values = dfsMetrics["nOperations"]
+    # iddfs_op_values = dfsMetrics["nOperations"]
+    # greedy_op_values = greedyMetrics["nOperations"]
+    # astar_op_values = astarMetrics["nOperations"]
+    # wAstar_op_values = wAstarMetrics["nOperations"]
+
+    axis[2].plot(levels, bfs_op_values)
+
+    plt.show()
 
     return None
 
 if __name__ == "__main__":
     main()
+

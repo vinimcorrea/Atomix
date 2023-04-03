@@ -73,7 +73,7 @@ class DFS(Algorithm):
     def getSolveTime(self):
         return super().getSolveTime
     
-    def dfsaux(self, state, start, movehistory):
+    def dfsaux(self, state, start):
 
         self.nOperations += 1
 
@@ -82,16 +82,13 @@ class DFS(Algorithm):
             self.getSolveTime = end - start
             self.maxMemory = tracemalloc.get_traced_memory()[1]
             tracemalloc.stop()
-            return movehistory
+            return state.move_history
 
         for child in state.children():
-            if child.board not in movehistory:
-                print("NODE FOUND")
-                movehistory.append(child.board)
-                result = self.dfsaux(child, start, movehistory)
+            if child.board not in state.move_history:
+                result = self.dfsaux(child, start)
                 if result:
                     return result
-                movehistory.pop()
 
         return None
 
@@ -100,9 +97,7 @@ class DFS(Algorithm):
         start = time.time()
         tracemalloc.start()
 
-        movehistory = [state.board]
-
-        result = self.dfsaux(state, start, movehistory)
+        result = self.dfsaux(state, start)
 
         return result
 
@@ -201,6 +196,9 @@ class ASTAR(Algorithm):
 
     def algorithm(self, state):
 
+        start = time.time()
+        tracemalloc.start()
+
         queue = PriorityQueue()
         currentCost = {}
         cameFrom = {}
@@ -212,8 +210,13 @@ class ASTAR(Algorithm):
 
         while not queue.empty():
             currentNode = queue.get()
+            self.nOperations += 1
 
             if currentNode.is_molecule_formed():
+                end = time.time()
+                self.solveTime = end - start
+                self.maxMemory = tracemalloc.get_traced_memory()[1]
+                tracemalloc.stop()
                 return state.move_history
 
             for child in currentNode.children:
@@ -228,6 +231,7 @@ class ASTAR(Algorithm):
         return "Wasn't able to find a solution"
 
 class WEIGHTEDASTAR(ASTAR):
+
     def __init__(self):
         super().__init__()
     
@@ -246,3 +250,20 @@ class WEIGHTEDASTAR(ASTAR):
 
     def algorithm(state):
         return super().algorithm(state)
+    
+class IDASTAR(Algorithm):
+    def __init__(self):
+        super().__init__()
+    
+    def getNOperations(self):
+        return super().getNOperations()
+    
+    def getMaxMemory(self):
+        return super().getMaxMemory
+
+    def getSolveTime(self):
+        return super().getSolveTime
+    
+    def algorithm(self):
+        return None
+    
