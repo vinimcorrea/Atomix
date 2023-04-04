@@ -54,7 +54,8 @@ def openness(state):
                 other_atom = bond[0] if bond[1] == atom else bond[1]
                 if other_atom in molecule['atoms']:
                     distance = shortest_path(state.board, molecule['atoms'][atom], molecule['atoms'][other_atom])
-                    required_distance = abs(state.molecule.index(atom) - state.molecule.index(other_atom)) - 1
+                    print(type(atom), state.molecule[0])
+                    required_distance = abs(state.molecule[0].index(atom) - state.molecule[0].index(other_atom)) - 1
                     if distance == required_distance:
                         can_connect = True
                         break
@@ -78,8 +79,7 @@ def pairwise_distance(state):
     for bond in target_bonds:
         atom1, atom2 = bond
         distance = shortest_path(state.board, atoms[atom1], atoms[atom2])
-        print(type(state.molecule[0]))
-        required_distance = abs(state.molecule.index(atom1.strip()) - state.molecule.index(atom2.strip())) - 1
+        required_distance = abs(state.molecule[0].index(atom1) - state.molecule[0].index(atom2)) - 1
         total_distance += abs(distance - required_distance)
     return total_distance
 
@@ -170,10 +170,10 @@ class DFS(Algorithm):
         return super().getNOperations()
     
     def getMaxMemory(self):
-        return super().getMaxMemory
+        return super().getMaxMemory()
 
     def getSolveTime(self):
-        return super().getSolveTime
+        return super().getSolveTime()
     
     def getNMoves(self):
         return super().getNMoves()
@@ -181,11 +181,11 @@ class DFS(Algorithm):
     def algorithm(self, state):
         start = time.time()
         tracemalloc.start()
-        stack = [(state, start)]
+        stack = [state]
         visited = set()
 
         while stack:
-            node, node_start = stack.pop()
+            node = stack.pop()
             self.nOperations += 1
 
             if node.is_molecule_formed():
@@ -200,7 +200,7 @@ class DFS(Algorithm):
 
             for child in node.children():
                 if child not in visited:
-                    stack.append((child, node_start))
+                    stack.append(child)
 
         return None
 
@@ -212,10 +212,10 @@ class IDDFS(Algorithm):
         return super().getNOperations()
     
     def getMaxMemory(self):
-        return super().getMaxMemory
+        return super().getMaxMemory()
 
     def getSolveTime(self):
-        return super().getSolveTime
+        return super().getSolveTime()
     
     def getNMoves(self):
         return super().getNMoves()
@@ -255,15 +255,15 @@ class GREEDY(Algorithm):
         return super().getNOperations()
     
     def getMaxMemory(self):
-        return super().getMaxMemory
+        return super().getMaxMemory()
 
     def getSolveTime(self):
-        return super().getSolveTime
+        return super().getSolveTime()
     
     def getNMoves(self):
         return super().getNMoves()
     
-    def algorithm(self, node):
+    def algorithm(self, node, heuristic):
         # node (NPuzzleState) - the initial state
         # heuristic (function) - the heuristic function that takes a board (matrix), and returns an integer
         setattr(AtomixState, "__lt__", lambda self, other: heuristic(self) < heuristic(other))
@@ -310,35 +310,29 @@ class ASTAR(GREEDY):
     def getNMoves(self):
         return super().getNMoves()
 
-    def heuristic(state):
-        return lambda state: super().heuristic(state) + state.cost
-
-    def algorithm(self, state):
-        return super().algorithm(state, self.heuristic(state))
+    def algorithm(self, state, heuristic):
+        return super().algorithm(state, lambda state: heuristic(state) + state.cost)
 
 class WEIGHTEDASTAR(ASTAR):
 
     def __init__(self):
         super().__init__()
+
     
     def getNOperations(self):
         return super().getNOperations()
     
     def getMaxMemory(self):
-        return super().getMaxMemory
+        return super().getMaxMemory()
 
     def getSolveTime(self):
-        return super().getSolveTime
+        return super().getSolveTime()
     
     def getNMoves(self):
         return super().getNMoves()
 
-    def heuristic(state, weightFactor):
-      
-        return super().heuristic(state) * weightFactor # Multiply the heuristic cost by a weight factor
-
-    def algorithm(state):
-        return super().algorithm(state)
+    def algorithm(self, state):
+        return super().algorithm(state, lambda state: 2*(heuristic(state) + state.cost))
     
 class IDASTAR(Algorithm):
     def __init__(self):
@@ -348,10 +342,10 @@ class IDASTAR(Algorithm):
         return super().getNOperations()
     
     def getMaxMemory(self):
-        return super().getMaxMemory
+        return super().getMaxMemory()
 
     def getSolveTime(self):
-        return super().getSolveTime
+        return super().getSolveTime()
     
     def getNMoves(self):
         return super().getNMoves()
