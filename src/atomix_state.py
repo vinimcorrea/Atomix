@@ -1,6 +1,4 @@
 from copy import deepcopy
-from collections import deque
-
 
 BLANK_SPACE = '.'
 
@@ -19,7 +17,7 @@ class AtomixState:
         self.cost = cost
 
         # create an empty array and append move_history
-        self.move_history = [] + move_history + [self.board]
+        self.move_history = [] + move_history + [self]
 
     def children(self):
         # returns the possible moves
@@ -36,6 +34,14 @@ class AtomixState:
                     children.append(child)
 
         return children
+
+    def goal_positions(self):
+        goal_positions = {}
+        for row_idx, row in enumerate(self.molecule):
+            for col_idx, atom in enumerate(row):
+                if atom != '.':
+                    goal_positions[atom] = (row_idx, col_idx)
+        return goal_positions
 
     def find_atoms(self, molecule_struc):
         # finds the atoms and their positions
@@ -84,7 +90,8 @@ class AtomixState:
         # decorator function to add to history everytime a move is made
         # functions with @move will apply this decorator
         def wrapper(self, atom, atom_pos_row, atom_pos_col):
-            state = AtomixState(self.board, self.molecule, self.atom_map, self.molecule_name, self.move_history, self.cost)
+            state = AtomixState(self.board, self.molecule, self.atom_map,
+                                self.molecule_name, self.move_history, self.cost)
             value = func(state, atom, atom_pos_row, atom_pos_col)
             if value:
                 return state
@@ -93,13 +100,8 @@ class AtomixState:
 
         return wrapper
 
-    def manhattan_distance(self, pos1, pos2):
-        return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
-
-
     @move
     def up(self, atom, atom_pos_row, atom_pos_col):
-        # moves the atom upwards
         prev = self.board[atom_pos_row - 1][atom_pos_col]
 
         if prev != BLANK_SPACE:
@@ -178,7 +180,6 @@ class AtomixState:
         self.update_bonds()
 
         return True
-
 
     @move
     def left(self, atom, atom_pos_row, atom_pos_col):
@@ -268,14 +269,39 @@ class AtomixState:
         self.atomic_structure["current_bonds"] = new_bonds
 
     def is_molecule_formed(self):
-        return self.atomic_structure["current_bonds"] == self.atomic_structure["target_bonds"]
+        atoms = self.atomic_structure['atoms']
+        target_bonds = self.atomic_structure['target_bonds']
+
+        # Check if all required bonds are formed
+        if set(target_bonds) != set(self.atomic_structure['current_bonds']):
+            return False
+
+        # Check if the atoms are in the correct order and in the same row
+        atom_positions = [atoms[atom] for atom in sorted(atoms.keys())]
+        same_row = all(atom_positions[i][0] == atom_positions[i + 1][0] for i in range(len(atom_positions) - 1))
+
+        # Check if the atoms form the correct substring of the board
+        row = atom_positions[0][0]
+        board_row = ''.join(self.board[row][col] for col in range(len(self.board[row])))
+        if self.molecule[0] not in board_row:
+            return False
+
+        return True
 
     # Add this method to the GameState class:
-    def move_cursor(self, cursor_position, move_direction, cell_size, board_y_offset, board_x_offset):
+    def move_cursor(self, cursor_position, move_direction, cell_size, board_y_offset, board_x_offset,
+                    selected_atom_pos=None):
         x, y = cursor_position
         dx, dy = move_direction
-        new_x = max(board_x_offset, min(board_x_offset + (self.board_width - 1) * cell_size, x + dx * cell_size))
-        new_y = max(board_y_offset, min(board_y_offset + (self.board_width - 1) * cell_size, y + dy * cell_size))
+
+        if selected_atom_pos is not None:
+            # If an atom is selected, make the cursor follow the atom
+            new_x, new_y = selected_atom_pos[1] * cell_size + board_x_offset, selected_atom_pos[
+                0] * cell_size + board_y_offset
+        else:
+            # If no atom is selected, move the cursor as usual
+            new_x = max(board_x_offset, min(board_x_offset + (self.board_width - 1) * cell_size, x + dx * cell_size))
+            new_y = max(board_y_offset, min(board_y_offset + (self.board_width - 1) * cell_size, y + dy * cell_size))
 
         return new_x, new_y
 

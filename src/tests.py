@@ -1,4 +1,4 @@
-from algortihms import *
+from uniformed_algortihms import *
 from atomix_state import AtomixState
 import os
 import matplotlib.pyplot as plt
