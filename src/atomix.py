@@ -120,7 +120,7 @@ def draw_menu():
         pygame.draw.rect(screen, GREEN, depth_rect)
     screen.blit(human_text, human_text_rect)
 
-    how_to_play_text, how_to_play_text_rect, how_to_play_button_rect, how_to_play_depth_rects = create_button("How to Play", WINDOW_WIDTH // 2, 550)
+    how_to_play_text, how_to_play_text_rect, how_to_play_button_rect, how_to_play_depth_rects = create_button("How to Play", WINDOW_WIDTH // 2, 450)
     for depth_rect in how_to_play_depth_rects:
         pygame.draw.rect(screen, YELLOW, depth_rect)
     screen.blit(how_to_play_text, how_to_play_text_rect)
@@ -183,11 +183,13 @@ def read_level(level_number):
                 atom_map[int(num)] = {"atom": atom, "connections": {}}
                 for l in links:
                     num_pattern = re.compile(r'\d+')
-                    direction = l[-1]
+                    direction = l[1:]
                     neighbor_num = int(num_pattern.match(l).group())
                     atom_map[int(num)]["connections"][direction] = neighbor_num
 
     return AtomixState(level_map, molecule_to_form, atom_map, molecule_name_phase)
+
+
 
 
 def draw_target_molecule(molecule_str, atom_map):
@@ -219,6 +221,18 @@ def draw_target_molecule(molecule_str, atom_map):
                         x_offset = -distance * CELL_SIZE // 2
                     elif direction == "R":
                         x_offset = distance * CELL_SIZE // 2
+                    elif direction == "UR":
+                        x_offset = distance * CELL_SIZE // 2
+                        y_offset = -distance * CELL_SIZE // 2
+                    elif direction == "DR":
+                        x_offset = distance * CELL_SIZE // 2
+                        y_offset = distance * CELL_SIZE // 2
+                    elif direction == "UL":
+                        x_offset = -distance * CELL_SIZE // 2
+                        y_offset = -distance * CELL_SIZE // 2
+                    elif direction == "DL":
+                        x_offset = -distance * CELL_SIZE // 2
+                        y_offset = distance * CELL_SIZE // 2
 
                     src_center = atom_rect.center
                     pygame.draw.line(molecule_surf, GRAY, src_center,
@@ -311,7 +325,8 @@ def draw_level(state, cursor_position):
 
     for row in range(board_height):
         for col in range(board_width):
-            cell_rect = pygame.Rect(col * CELL_SIZE + board_x_offset, row * CELL_SIZE + board_y_offset, CELL_SIZE, CELL_SIZE)
+            cell_rect = pygame.Rect(col * CELL_SIZE + board_x_offset, row * CELL_SIZE + board_y_offset, CELL_SIZE,
+                                    CELL_SIZE)
             pygame.draw.rect(screen, BOARD_COLOR, cell_rect, 1)
             if board[row][col] == BLANK_SPACE:
                 continue
@@ -338,6 +353,18 @@ def draw_level(state, cursor_position):
                         x_offset = -distance * CELL_SIZE // 2
                     elif direction == "R":
                         x_offset = distance * CELL_SIZE // 2
+                    elif direction == "UR":
+                        x_offset = distance * CELL_SIZE // 2
+                        y_offset = -distance * CELL_SIZE // 2
+                    elif direction == "DR":
+                        x_offset = distance * CELL_SIZE // 2
+                        y_offset = distance * CELL_SIZE // 2
+                    elif direction == "UL":
+                        x_offset = -distance * CELL_SIZE // 2
+                        y_offset = -distance * CELL_SIZE // 2
+                    elif direction == "DL":
+                        x_offset = -distance * CELL_SIZE // 2
+                        y_offset = distance * CELL_SIZE // 2
 
                     src_center = atom_rect.center
                     pygame.draw.line(screen, GRAY, src_center,
@@ -476,6 +503,7 @@ HEURISTIC_ALGORITHMS = [greedy_search, a_star_search, weighted_a_star_search]
 num_operations = 0
 max_memory = 0
 elapsed_time = 0
+move_count = 0
 
 def computer_play(game_state, algorithm):
     global solution, num_operations, max_memory, elapsed_time
@@ -603,6 +631,13 @@ def menu():
             continue
 
 
+def draw_move_count(move_count):
+    move_count_text = f"Moves: {move_count}"
+    text_surface = FONT_SMALL.render(move_count_text, True, WHITE)
+    text_rect = text_surface.get_rect(topleft=(WINDOW_WIDTH - 250, 450))
+    screen.blit(text_surface, text_rect)
+
+
 def play_game(mode, algorithm=None, level=1):
     game_over = False
     cursor_position = (1, 1)
@@ -688,12 +723,10 @@ def play_game(mode, algorithm=None, level=1):
                 game_state = read_level(level)
             pygame.time.delay(500)  # Add a delay (in milliseconds) between the computer's moves
 
-        move_count_text = FONT_MEDIUM.render(f"Moves: {move_count}", True, BLACK)
-        move_count_rect = move_count_text.get_rect(center=(WINDOW_WIDTH - 100, WINDOW_HEIGHT // 2 + 50))
-        screen.blit(move_count_text, move_count_rect)
+
 
         draw_level(game_state, cursor_position)
-
+        draw_move_count(move_count)
         pygame.display.update()
 
 

@@ -1,6 +1,7 @@
 from atomix_state import AtomixState
 import heapq
 
+
 def greedy_search(problem, heuristic):
     setattr(AtomixState, "__lt__", lambda self, other: heuristic(self) < heuristic(other))
     states = [problem]
@@ -51,7 +52,7 @@ def a_star_search(problem, heuristic):
     return None, num_operations, max_memory
 
 
-def weighted_a_star_search(problem, heuristic, weight=1):
+def weighted_a_star_search(problem, heuristic, weight=4):
     visited = set()
     tie_breaker = 0  # added a tie-breaker
     queue = [(heuristic(problem) * weight, 0, tie_breaker, problem)]
